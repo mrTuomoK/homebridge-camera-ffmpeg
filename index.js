@@ -72,19 +72,48 @@ ffmpegPlatform.prototype.didFinishLaunching = function() {
       }
 
       cameraAccessory.context.log = self.log;
+      
+      // addition
+      cameraAccessory.context.motionDetected = false;
+
       if (cameraConfig.motion && cameraConfig.pirPin) {
-        /*
-        var button = new Service.Switch(cameraName);
-        cameraAccessory.addService(button);
-        */
 
         var motion = new Service.MotionSensor(cameraName);
-        cameraAccessory.addService(motion);
-        
+
+        motion
+          .getCharacteristic(Characteristic.MotionDetected)
+          .on('get', (callback) => {
+            callback(null, cameraAccessory.motionDetected);
+          });
+
+        gpio.on('change', (channel, value) => {
+          if (channel === cameraConfig.pirPin && value !== cameraAccessory.motionDetected) {
+            cameraAccessory.motionDetected = value;
+            motion.setCharacteristic(Characteristic.MotionDetected, cameraAccessory.motionDetected);
+          }
+        });
+
+        gpio.setup(cameraConfig.pirPin, gpio.DIR_IN, gpio.EDGE_BOTH, () => {
+          gpio.read(cameraConfig.pirPin, (err, value) => {
+            if (err) {
+              console.error(err);
+              return;
+            }
+            cameraAccessory.motionDetected = value;
+          });
+        });
+
         /*
-        button.getCharacteristic(Characteristic.On)
-          .on('set', _Motion.bind(cameraAccessory));
+        motion
+          .getCharacteristic(Characteristic.Name)
+          .on('get', (callback) => {
+            console.log('HERE 2');
+            callback(null, this.name);
+          });
           */
+      
+        cameraAccessory.addService(motion);
+
       }
 
       var cameraSource = new FFMPEG(hap, cameraConfig, self.log, videoProcessor, interfaceName);
@@ -95,21 +124,3 @@ ffmpegPlatform.prototype.didFinishLaunching = function() {
     self.api.publishCameraAccessories("Camera-ffmpeg", configuredAccessories);
   }
 };
-
-/*
-function _Motion(on, callback) {
-  this.context.log("Setting %s Motion to %s", this.displayName, on);
-
-  this.getService(Service.MotionSensor).setCharacteristic(Characteristic.MotionDetected, (on ? 1 : 0));
-  if (on) {
-    setTimeout(_Reset.bind(this), 5000);
-  }
-  callback();
-}
-
-function _Reset() {
-  this.context.log("Setting %s Button to false", this.displayName);
-
-  this.getService(Service.Switch).setCharacteristic(Characteristic.On, false);
-}
-*/
