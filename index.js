@@ -2,6 +2,10 @@ var Accessory, Service, Characteristic, hap, UUIDGen;
 
 var FFMPEG = require('./ffmpeg').FFMPEG;
 
+// additions rapsberryPi PIR
+var gpio = require('rpi-gpio');
+gpio.setMode(gpio.MODE_BCM);
+
 module.exports = function(homebridge) {
   Accessory = homebridge.platformAccessory;
   hap = homebridge.hap;
@@ -68,15 +72,19 @@ ffmpegPlatform.prototype.didFinishLaunching = function() {
       }
 
       cameraAccessory.context.log = self.log;
-      if (cameraConfig.motion) {
+      if (cameraConfig.motion && cameraConfig.pirPin) {
+        /*
         var button = new Service.Switch(cameraName);
         cameraAccessory.addService(button);
+        */
 
         var motion = new Service.MotionSensor(cameraName);
         cameraAccessory.addService(motion);
-
+        
+        /*
         button.getCharacteristic(Characteristic.On)
           .on('set', _Motion.bind(cameraAccessory));
+          */
       }
 
       var cameraSource = new FFMPEG(hap, cameraConfig, self.log, videoProcessor, interfaceName);
@@ -88,6 +96,7 @@ ffmpegPlatform.prototype.didFinishLaunching = function() {
   }
 };
 
+/*
 function _Motion(on, callback) {
   this.context.log("Setting %s Motion to %s", this.displayName, on);
 
@@ -103,3 +112,4 @@ function _Reset() {
 
   this.getService(Service.Switch).setCharacteristic(Characteristic.On, false);
 }
+*/
